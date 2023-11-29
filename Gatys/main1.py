@@ -4,6 +4,8 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.applications import vgg19
 import time
+import PIL
+import matplotlib.pyplot as plt 
 
 f = open("loss.txt", "w")
 
@@ -15,7 +17,7 @@ else:
 # Generated image size
 RESIZE_HEIGHT = 607
 
-NUM_ITER = 3000
+NUM_ITER = 1000
 
 # Weights of the different loss components
 CONTENT_WEIGHT = 8e-4 # 8e-4 # test different values
@@ -119,19 +121,52 @@ def deprocess_image(tensor, result_height, result_width):
     tensor = tensor[:, :, ::-1]
     return np.clip(tensor, 0, 255).astype("uint8")
 
+# merge two styles using average
+def merge_style_features(style_features1, style_features2):
+    merged_style = {}
+    # trans = torchvision.transforms.ToPILImage()
+    for key in style_features1.keys():
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))  # Adjust figsize as needed
+
+        # for i in range(3):
+        #     axes[i].imshow(style_features1[key][0, :, :, i], cmap='gray')  # Assuming grayscale images, adjust cmap if needed
+        #     axes[i].axis('off')  # Turn off axis labels for clarity
+        # fig.title(key)
+        # plt.show()
+        # print(style_features1[key].view(style_features1[key].shape[1], style_features1[key].shape[2]))
+        merged_style[key] = (style_features1[key] + style_features2[key]) / 2
+    return merged_style
+
+def merge_style_features_percentage(style_features1, style_features2, percentage):
+    merged_features = {}
+    for key in style_features1.keys():
+        # Ensure the shapes of the arrays are the same
+        if style_features1[key].shape == style_features2[key].shape:
+            # Randomly choose indices to replace based on the specified percentage
+            mask = np.random.rand(*style_features1[key].shape) < percentage
+
+            # Replace values from style_features1 with values from style_features2 based on the mask
+            merged_features[key] = np.where(mask, style_features2[key], style_features1[key])
+        else:
+            # If shapes are different, use the values from style_features1 directly
+            merged_features[key] = style_features1[key]
+
+    return merged_features
+    
 if __name__ == "__main__":
-    # Prepare content, stlye images
-    path = os.path.abspath(os.getcwd())
-    content_image_path = keras.utils.get_file(path + '\dataset\paris.jpg', 'https://i.imgur.com/F28w3Ac.jpg')
-    style_image_path = keras.utils.get_file(path + '\dataset\starry_night.jpg', 'https://i.imgur.com/9ooB60I.jpg')
+    # Prepare content, style images
+    content_image_path = './dataset/paris.jpg'
+    style_image_path_1 = './dataset/starry_night.jpg'
+    style_image_path_2 = './dataset/iris.jpg'
     result_height, result_width = get_result_image_size(content_image_path, RESIZE_HEIGHT)
     print("result resolution: (%d, %d)" % (result_height, result_width))
 
     # Preprocessing
     content_tensor = preprocess_image(content_image_path, result_height, result_width)
-    style_tensor = preprocess_image(style_image_path, result_height, result_width)
-    generated_image = tf.Variable(tf.random.uniform(style_tensor.shape, dtype=tf.dtypes.float32)) # gaussian noise
-    # generated_image = tf.Variable(preprocess_image(content_image_path, result_height, result_width)) # content image
+    style_tensor1 = preprocess_image(style_image_path_1, result_height, result_width)
+    style_tensor2 = preprocess_image(style_image_path_2, result_height, result_width)
+    # generated_image = tf.Variable(tf.random.uniform(content_tensor.shape, dtype=tf.dtypes.float32)) # gaussian noise
+    generated_image = tf.Variable(preprocess_image(content_image_path, result_height, result_width)) # content image
 
     # Build model
     model = get_model()
@@ -141,8 +176,19 @@ if __name__ == "__main__":
     f.write(str(optimizer.get_config()))
 
     content_features = model(content_tensor)
-    style_features = model(style_tensor)
-
+    style_features1 = model(style_tensor1)
+    style_features2 = model(style_tensor2)
+    # print(style_features2)
+    # print(list(style_features1.values())[0])
+    # print(type(list(style_features2.values())[0]))
+    
+    print('before merging styles')
+    
+    # merge style features with mean
+    # style_features = merge_style_features(style_features1, style_features2)
+    style_features = merge_style_features_percentage(style_features1, style_features2,5)
+    print('styles merged')
+    
     start_time = time.time()
     # Optimize result image
     for iter in range(NUM_ITER):
