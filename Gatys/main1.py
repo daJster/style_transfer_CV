@@ -2,9 +2,8 @@ import os
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.applications import vgg19
+from keras.applications import vgg19
 import time
-import PIL
 import matplotlib.pyplot as plt 
 
 f = open("loss.txt", "w")
@@ -121,22 +120,81 @@ def deprocess_image(tensor, result_height, result_width):
     tensor = tensor[:, :, ::-1]
     return np.clip(tensor, 0, 255).astype("uint8")
 
-# merge two styles using average
-def merge_style_features(style_features1, style_features2):
-    merged_style = {}
-    # trans = torchvision.transforms.ToPILImage()
-    for key in style_features1.keys():
+
+
+def check_get_shape(style_features_list) :
+    if not style_features_list :
+        raise ValueError("style_features_list must contain at least one style feature.")
+
+    shapes = [style_feature.shape for style_feature in style_features_list]
+    if len(set(shapes)) != 1 :
+        raise ValueError(f"All style features must have the same shape. Found shapes: {shapes}")
+    
+    return shapes[0]
+
+# function to merge style features using mean
+def merge_style_features_mean(style_features_list) :
+
+    merged_style_features = {}
+
+    for key in STYLE_LAYER_NAMES :
+        i = 0
+        for style_feature in style_features_list :
+            if i == 0 :
+                merged_style_features[key] = style_feature[key]
+                i += 1
+            else : 
+                merged_style_features[key] += style_feature[key]
+
+        merged_style_features[key] /= len(style_features_list) # mean
+    return merged_style_features
+
+def merge_style_features_percentage(style_features_list, percentages) :
+        
+    merged_style_features = {}
+    for layer in STYLE_LAYER_NAMES :
+        merged_style_features[layer] = np.zeros(style_features_list[0][layer].shape)
+        
+        for z in range(style_features_list[0][layer].shape[3]):
+            
+            selected_style = np.random.multinomial(1, percentages) # multinomial distribution
+            index = np.argmax(selected_style)
+            merged_style_features[layer][:, :, :, z] = style_features_list[index][layer][:, :, :, z]
+            
+        merged_style_features[layer] = tf.convert_to_tensor(merged_style_features[layer], dtype=tf.float32)
+            
+    return merged_style_features
+    
+
+def merge_style_features_alternate(style_features_list) :
+    '''
+    alternate style features
+    '''
+    n = len(style_features_list)
+    merged_style_features = {}
+    for layer in STYLE_LAYER_NAMES :
+        merged_style_features[layer] = np.zeros(style_features_list[0][layer].shape)
+        
+        for z in range(style_features_list[0][layer].shape[3]):
+            
+            merged_style_features[layer][:, :, :, z] = style_features_list[z%n][layer][:, :, :, z] # modulo
+            
+        merged_style_features[layer] = tf.convert_to_tensor(merged_style_features[layer], dtype=tf.float32) 
+
+    return merged_style_features
+
+
+
+def display_style_features(style_features_list):
+    for key in style_features_list[0].keys():
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))  # Adjust figsize as needed
+        for i in range(3):
+            axes[i].imshow(style_features_list[0][key][0, :, :, i], cmap='gray')  # Assuming grayscale images, adjust cmap if needed
+            axes[i].axis('off')  # Turn off axis labels for clarity
+        fig.title(key)
+        plt.show()
 
-        # for i in range(3):
-        #     axes[i].imshow(style_features1[key][0, :, :, i], cmap='gray')  # Assuming grayscale images, adjust cmap if needed
-        #     axes[i].axis('off')  # Turn off axis labels for clarity
-        # fig.title(key)
-        # plt.show()
-        # print(style_features1[key].view(style_features1[key].shape[1], style_features1[key].shape[2]))
-        merged_style[key] = (style_features1[key] + style_features2[key]) / 2
-    return merged_style
-
+'''
 def merge_style_features_percentage(style_features1, style_features2, percentage):
     merged_features = {}
     for key in style_features1.keys():
@@ -152,7 +210,8 @@ def merge_style_features_percentage(style_features1, style_features2, percentage
             merged_features[key] = style_features1[key]
 
     return merged_features
-    
+'''  
+
 if __name__ == "__main__":
     # Prepare content, style images
     content_image_path = './dataset/paris.jpg'
@@ -170,23 +229,30 @@ if __name__ == "__main__":
 
     # Build model
     model = get_model()
+   
     optimizer = get_optimizer()
     print(model.summary())
 
     f.write(str(optimizer.get_config()))
 
     content_features = model(content_tensor)
-    style_features1 = model(style_tensor1)
-    style_features2 = model(style_tensor2)
+    style_features_list = [model(style_tensor1), model(style_tensor2)]
+    print('before merging styles')
+    # method 1
+    # style_features = merge_style_features_mean(style_features_list) # ok
+    # method 2
+    # style_features = merge_style_features_percentage(style_features_list, [0.5, 0.5])
+    style_features = merge_style_features_alternate(style_features_list)
+    # style_features1 = model(style_tensor1)
+    # style_features2 = model(style_tensor2)
     # print(style_features2)
     # print(list(style_features1.values())[0])
     # print(type(list(style_features2.values())[0]))
     
-    print('before merging styles')
     
     # merge style features with mean
     # style_features = merge_style_features(style_features1, style_features2)
-    style_features = merge_style_features_percentage(style_features1, style_features2,5)
+    # style_features = merge_style_features_percentage(style_features1, style_features2,5)
     print('styles merged')
     
     start_time = time.time()
@@ -201,7 +267,7 @@ if __name__ == "__main__":
         f.write("iter: %4d, loss: %8.f\n" % (iter, loss))
         optimizer.apply_gradients([(grads, generated_image)])
 
-        if (iter + 1) % 200 == 0:
+        if (iter + 1) % 100 == 0:
             assert(os.path.isdir('result'))
             name = "result/generated_at_iteration_%d.png" % (iter + 1)
             save_result(generated_image, result_height, result_width, name)
@@ -213,3 +279,5 @@ if __name__ == "__main__":
     final_time = time.time() - start_time
     print('generation of image lasted : ', final_time, 's')
     f.close()
+    
+    # vision transformer on Tensorflow : https://www.tensorflow.org/api_docs/python/tfm/vision/configs/backbones/VisionTransformer
