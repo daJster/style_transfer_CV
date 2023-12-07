@@ -5,6 +5,7 @@ from tensorflow import keras
 from keras.applications import vgg19
 import time
 import matplotlib.pyplot as plt 
+from skimage import exposure 
 
 f = open("loss.txt", "w")
 
@@ -102,6 +103,33 @@ def gram_matrix(x):
    features = tf.reshape(x, (tf.shape(x)[0], -1))
    gram = tf.matmul(features, tf.transpose(features))
    return gram
+
+
+def match_histograms(source, template):
+    """
+    Adjust the pixel values of a grayscale image such that its histogram
+    matches that of a target image
+    """
+    source_hist, bin_centers = exposure.histogram(source)
+    template_hist, _ = exposure.histogram(template)
+    matched = exposure.match_histograms(source, template, multichannel=True)
+    return matched
+
+def preprocess_image_with_color_matching(content_image_path, style_image_path, target_height, target_width):
+    content_img = keras.preprocessing.image.load_img(content_image_path, target_size=(target_height, target_width))
+    style_img = keras.preprocessing.image.load_img(style_image_path, target_size=(target_height, target_width))
+
+    content_arr = keras.preprocessing.image.img_to_array(content_img)
+    style_arr = keras.preprocessing.image.img_to_array(style_img)
+
+    # histogram matching
+    matched_style_arr = match_histograms(style_arr, content_arr)
+
+    matched_style_arr = np.expand_dims(matched_style_arr, axis=0)
+    matched_style_arr = vgg19.preprocess_input(matched_style_arr)
+
+    return tf.convert_to_tensor(matched_style_arr)
+
 
 def save_result(generated_image, result_height, result_width, name):
     img = deprocess_image(generated_image, result_height, result_width)
@@ -223,7 +251,13 @@ if __name__ == "__main__":
 
     # Preprocessing
     content_tensor = preprocess_image(content_image_path, result_height, result_width)
-    style_tensor1 = preprocess_image(style_image_path_2, result_height, result_width)
+
+    # without color preservation 
+    # style_tensor1 = preprocess_image(style_image_path_2, result_height, result_width)
+
+    # color preservation
+    style_tensor1 = preprocess_image_with_color_matching(content_image_path, style_image_path_2, result_height, result_width)
+
     # style_tensor2 = preprocess_image(style_image_path_2, result_height, result_width)
     # generated_image = tf.Variable(tf.random.uniform(content_tensor.shape, dtype=tf.dtypes.float32)) # gaussian noise
     generated_image = tf.Variable(preprocess_image(content_image_path, result_height, result_width)) # content image
