@@ -16,7 +16,7 @@ else:
 # Generated image size
 RESIZE_HEIGHT = 607
 
-NUM_ITER = 1000
+NUM_ITER = 3000
 
 # Weights of the different loss components
 CONTENT_WEIGHT = 8e-4 # 8e-4 # test different values
@@ -36,6 +36,7 @@ STYLE_LAYER_NAMES = [
 
 def get_result_image_size(image_path, result_height):
     image_width, image_height = keras.preprocessing.image.load_img(image_path).size
+    print('width and height', image_width, image_height)
     result_width = int(image_width * result_height / image_height)
     return result_height, result_width
 
@@ -214,16 +215,16 @@ def merge_style_features_percentage(style_features1, style_features2, percentage
 
 if __name__ == "__main__":
     # Prepare content, style images
-    content_image_path = './dataset/paris.jpg'
-    style_image_path_1 = './dataset/starry_night.jpg'
-    style_image_path_2 = './dataset/iris.jpg'
+    content_image_path = './dataset/einstein.jpg'
+    # style_image_path_1 = './dataset/ghibli/ghibli-3.jpg'
+    style_image_path_2 = './dataset/manga/manga-2.jpg'
     result_height, result_width = get_result_image_size(content_image_path, RESIZE_HEIGHT)
     print("result resolution: (%d, %d)" % (result_height, result_width))
 
     # Preprocessing
     content_tensor = preprocess_image(content_image_path, result_height, result_width)
-    style_tensor1 = preprocess_image(style_image_path_1, result_height, result_width)
-    style_tensor2 = preprocess_image(style_image_path_2, result_height, result_width)
+    style_tensor1 = preprocess_image(style_image_path_2, result_height, result_width)
+    # style_tensor2 = preprocess_image(style_image_path_2, result_height, result_width)
     # generated_image = tf.Variable(tf.random.uniform(content_tensor.shape, dtype=tf.dtypes.float32)) # gaussian noise
     generated_image = tf.Variable(preprocess_image(content_image_path, result_height, result_width)) # content image
 
@@ -236,14 +237,15 @@ if __name__ == "__main__":
     f.write(str(optimizer.get_config()))
 
     content_features = model(content_tensor)
-    style_features_list = [model(style_tensor1), model(style_tensor2)]
+    # style_features_list = [model(style_tensor1), model(style_tensor2)]
+    style_features_list = [model(style_tensor1)]
     print('before merging styles')
     # method 1
     # style_features = merge_style_features_mean(style_features_list) # ok
     # method 2
     # style_features = merge_style_features_percentage(style_features_list, [0.5, 0.5])
-    style_features = merge_style_features_alternate(style_features_list)
-    # style_features1 = model(style_tensor1)
+    # style_features = merge_style_features_alternate(style_features_list)
+    style_features1 = model(style_tensor1)
     # style_features2 = model(style_tensor2)
     # print(style_features2)
     # print(list(style_features1.values())[0])
@@ -259,7 +261,7 @@ if __name__ == "__main__":
     # Optimize result image
     for iter in range(NUM_ITER):
         with tf.GradientTape() as tape:
-            loss = compute_loss(model, generated_image, content_features, style_features)
+            loss = compute_loss(model, generated_image, content_features, style_features1)
 
         grads = tape.gradient(loss, generated_image)
 
