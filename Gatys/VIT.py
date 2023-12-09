@@ -149,7 +149,7 @@ class TransformerEncoder(Layer):
         return y    
 
 # build the VIT model    
-def create_VisionTransformer(num_classes, num_patches=196, projection_dim=768, input_shape=(224,335, 3)):
+def create_VisionTransformer(num_classes, num_patches=196, projection_dim=768, input_shape=(224, 224, 3)):
     inputs = Input(shape=input_shape)
     # Patch extractor
     patches = PatchExtractor()(inputs)
@@ -178,13 +178,42 @@ STYLE_LAYER_NAMES = [
 
 # apply style transfer using VIT architecture
 
+def square_resize(image_path, resize_height, resize_width):
+    for images, labels in image_path.take(1):
+        tf.image.resize(images, [resize_height, resize_width])
+    return resize_height, resize_width
+
+
+# compute loss for vision transformer 
+def masked_loss(label, pred):
+  mask = label != 0
+  loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+  loss = loss_object(label, pred)
+  mask = tf.cast(mask, dtype=loss.dtype)
+  loss *= mask
+  loss = tf.reduce_sum(loss)/tf.reduce_sum(mask)
+  return loss
+
+def masked_accuracy(label, pred):
+  pred = tf.argmax(pred, axis=2)
+  label = tf.cast(label, pred.dtype)
+  match = label == pred
+  mask = label != 0
+  match = match & mask
+  match = tf.cast(match, dtype=tf.float32)
+  mask = tf.cast(mask, dtype=tf.float32)
+  return tf.reduce_sum(match)/tf.reduce_sum(mask)
+
+
 # main part
 if __name__ == "__main__":
     # Prepare content, style images
     content_image_path = './dataset/paris.jpg'
     style_image_path = './dataset/starry_night.jpg'
-    result_height, result_width = get_result_image_size(content_image_path, RESIZE_HEIGHT)
-
+    # load images from dataset
+    train_ds = tf.keras.utils.image_dataset_from_directory('./dataset/')
+    result_height, result_width = square_resize(train_ds, 224, 224)
     print("result resolution: (%d, %d)" % (result_height, result_width))
 
     # Preprocessing
@@ -202,23 +231,18 @@ if __name__ == "__main__":
 
     content_features = model(content_tensor)
     style_features = model(style_tensor)
-    
-    print('before merging styles')
-    
-    # merge style features with mean
-    # style_features = merge_style_features(style_features1, style_features2)
-    
+
     start_time = time.time()
+    
     # Optimize result image
     for iter in range(NUM_ITER):
-        with tf.GradientTape() as tape:
-            loss = compute_loss(model, generated_image, content_features, style_features)
-
-        grads = tape.gradient(loss, generated_image)
+       
+        loss = model.compile(loss=masked_loss,optimizer=optimizer,metrics=[masked_accuracy])
 
         print("iter: %4d, loss: %8.f" % (iter, loss))
         f.write("iter: %4d, loss: %8.f\n" % (iter, loss))
-        optimizer.apply_gradients([(grads, generated_image)])
+        
+        #optimizer.apply_gradients([(grads, generated_image)]) # TOCHANGE
 
         if (iter + 1) % 200 == 0:
             assert(os.path.isdir('result'))
