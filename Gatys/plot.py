@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np    
 import os
-import imageio
+import cv2
 
 
 def plot_losses(losses, learning_rate):
@@ -64,34 +64,43 @@ def plot_features(tensor, layer_name):
 
     plt.savefig(f"./plots/features_evo_gatys_{layer_name}.png")
     plt.close()
-    
-    
 
-def create_gif(input_folder, output_gif_dir):
+def create_video(input_folder, output_video_path, fps=1):
     """
-    Create a GIF from multiple images in a folder.
+    Create a video from a sequence of pictures in a folder.
 
     Parameters:
     - input_folder (str): Path to the folder containing images.
-    - output_gif (str): Path to the output GIF file.
+    - output_video_path (str): Path to the output video file.
+    - fps (int, optional): Frames per second for the video. Default is 60.
     """
     images = []
-    
+
     # Get the list of image files in the folder
-    image_files = [f for f in os.listdir(input_folder) if f.endswith(('.png', '.jpg', '.jpeg'))]
-    
-    # Sort the image files to ensure correct order
-    image_files.sort()
+    image_files = [f for f in os.listdir(input_folder) if f.endswith('.png')]
+
+    # Sort the image files based on the iteration number in the file names
+    image_files.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 
     # Read each image and append it to the 'images' list
     for image_file in image_files:
         image_path = os.path.join(input_folder, image_file)
-        images.append(imageio.v2.imread(image_path))
+        images.append(cv2.imread(image_path))
 
-    # Create the GIF
-    imageio.mimsave(f"{output_gif_dir}result_{len(image_files)}.gif", images, duration=0.1)  # Adjust the duration as needed
-    print(f"gif created.")
+    # Get image dimensions
+    height, width, _ = images[0].shape
 
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
 
-if __name__ == "__main__" :
-    create_gif('./result/', './plots/')
+    # Write each frame to the video
+    for image in images:
+        out.write(image)
+
+    # Release the VideoWriter object
+    out.release()
+    print(f"Video created at: {output_video_path}")
+
+if __name__ == "__main__":
+    create_video('./result/', './plots/result_video_creek.mp4')

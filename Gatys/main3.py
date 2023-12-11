@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras.applications import vgg19
 import time
-from plot import plot_losses, plot_features, create_gif
+from plot import plot_losses, plot_features, create_video
 import matplotlib.pyplot as plt
 from skimage import exposure
 from PIL import Image
@@ -20,13 +20,13 @@ else:
 # Generated image size
 RESIZE_HEIGHT = 607
 
-NUM_ITER = 150
+NUM_ITER = 1000
 
 # Weights of the different loss components
 CONTENT_WEIGHT = 8e-05 # 8e-4 # test different values
 STYLE_WEIGHT = 1 # 8e-1, 8e-4 # test different values
-TOTAL_VARIATION_WEIGHT = 5e-05   #8.5e-05
-LEARNING_RATE = 12.0
+TOTAL_VARIATION_WEIGHT = 1e-6   #8.5e-05
+LEARNING_RATE = 4.0
 
 # The layer to use for the content loss.
 CONTENT_LAYER_NAME = "block5_conv2" #  initial : "block5_conv2" # test different values # block5_conv3, block5_conv4, block5_conv5
@@ -352,11 +352,12 @@ def merge_style_features_percentage(style_features1, style_features2, percentage
 '''
 
 if __name__ == "__main__":
-    check_iter=1
+    check_iter=10
     # Prepare content, style images
-    content_image_path = './dataset/paris.jpg'
+    name_content = "creek"
+    content_image_path = f'./dataset/{name_content}.jpg'
     # style_image_path_1 = './dataset/ghibli/ghibli-3.jpg'
-    style_image_path_2 = './dataset/starry_night.jpg'
+    style_image_path_2 = './dataset/renoit.png'
     result_height, result_width = get_result_image_size(content_image_path, RESIZE_HEIGHT)
     print("result resolution: (%d, %d)" % (result_height, result_width))
 
@@ -442,10 +443,6 @@ if __name__ == "__main__":
             else:
                 # Save without color preservation
                 Image.fromarray(generated_image_rgb).save("result/image_at_iteration_%d.png" % (iter + 1))
-
-        # if iter == 400 :
-        #     check_iter = 1
-        #     apply_color_preservation = True
     
     # Save final image after completing all iterations
     final_generated_image_rgb = deprocess_image(generated_image, result_height, result_width)
@@ -457,5 +454,5 @@ if __name__ == "__main__":
 
     final_time = time.time() - start_time
     print('generation of image lasted : ', final_time, 's')
-    create_gif('./result/', './result/')
+    # create_video('./result/', f'./result/result_video_{name_content}.mp4')
     f.close()
