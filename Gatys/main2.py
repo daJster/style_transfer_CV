@@ -30,12 +30,20 @@ TOTAL_VARIATION_WEIGHT = 1e-05   #8.5e-05
 CONTENT_LAYER_NAME = "block5_conv2" #  initial : "block5_conv2" # test different values # block5_conv3, block5_conv4, block5_conv5
 
 # List of layers to use for the style loss.
+# STYLE_LAYER_NAMES = [
+#     "block1_conv1", "block1_conv2",
+#     "block2_conv1", "block2_conv2",
+#     "block3_conv1", "block3_conv2", "block3_conv3", "block3_conv4",
+#     "block4_conv1", "block4_conv2", "block4_conv3", "block4_conv4",
+#     "block5_conv1", "block5_conv2", "block5_conv3", "block5_conv4",
+# ]
+
 STYLE_LAYER_NAMES = [
-    "block1_conv1", "block1_conv2",
-    "block2_conv1", "block2_conv2",
-    "block3_conv1", "block3_conv2", "block3_conv3", "block3_conv4",
-    "block4_conv1", "block4_conv2", "block4_conv3", "block4_conv4",
-    "block5_conv1", "block5_conv2", "block5_conv3", "block5_conv4",
+    "block1_conv1", 
+    "block2_conv1",
+    "block3_conv1",
+    "block4_conv1"
+    "block5_conv1",
 ]
 
 
@@ -197,7 +205,7 @@ def preprocess_image_with_color_matching(content_image_path, style_image_path, t
 
 
 def original_color_transform(content, generated, mask=None):
-    generated_resized = Image.fromarray(generated, mode='RGB').resize(content.shape[1::-1], Image.ANTIALIAS)
+    generated_resized = Image.fromarray(generated, mode='RGB').resize(content.shape[1::-1], Image.Resampling.LANCZOS)
 
     # convert images to YCbCr color space
     content_yCbCr = Image.fromarray(content, mode='RGB').convert('YCbCr')
@@ -340,9 +348,9 @@ def merge_style_features_percentage(style_features1, style_features2, percentage
 
 if __name__ == "__main__":
     # Prepare content, style images
-    content_image_path = './dataset/paris.jpg'
-    # style_image_path_1 = './dataset/ghibli/ghibli-3.jpg'
-    style_image_path_2 = './dataset/starry_night.jpg'
+    content_image_path = './dataset/einstein.jpg'
+    style_image_path_1 = './dataset/manga/manga-2.jpg'
+    #style_image_path_2 = './dataset/starry_night.jpg'
     result_height, result_width = get_result_image_size(content_image_path, RESIZE_HEIGHT)
     print("result resolution: (%d, %d)" % (result_height, result_width))
 
@@ -350,7 +358,7 @@ if __name__ == "__main__":
     content_tensor = preprocess_image(content_image_path, result_height, result_width)
 
     # without color preservation
-    style_tensor1 = preprocess_image(style_image_path_2, result_height, result_width)
+    style_tensor1 = preprocess_image(style_image_path_1, result_height, result_width)
 
     # color preservation (color matching)
     # style_tensor1 = preprocess_image_with_color_matching(content_image_path, style_image_path_2, result_height, result_width)
