@@ -237,7 +237,7 @@ if __name__ == "__main__":
     # Optimize result image
     for iter in range(NUM_ITER):
        
-        loss = model.compile(loss=masked_loss,optimizer=optimizer,metrics=[masked_accuracy])
+        loss = model.compile(loss=masked_loss(),optimizer=optimizer,metrics=[masked_accuracy])
 
         print("iter: %4d, loss: %8.f" % (iter, loss))
         f.write("iter: %4d, loss: %8.f\n" % (iter, loss))
