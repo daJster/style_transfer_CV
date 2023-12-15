@@ -26,7 +26,7 @@ NUM_ITER = 1000
 CONTENT_WEIGHT = 8e-05 # 8e-4 # test different values
 STYLE_WEIGHT = 1 # 8e-1, 8e-4 # test different values
 TOTAL_VARIATION_WEIGHT = 1e-6   #8.5e-05
-LEARNING_RATE = 4.0
+LEARNING_RATE = 1.0
 
 # The layer to use for the content loss.
 CONTENT_LAYER_NAME = "block5_conv2" #  initial : "block5_conv2" # test different values # block5_conv3, block5_conv4, block5_conv5

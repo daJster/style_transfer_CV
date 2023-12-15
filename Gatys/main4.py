@@ -22,10 +22,10 @@ else:
 RESIZE_HEIGHT = 607
 
 # Weights of the different loss components
-CONTENT_WEIGHT = 8e-05 # 8e-4 # test different values
-STYLE_WEIGHT = 1 # 8e-1, 8e-4 # test different values
-TOTAL_VARIATION_WEIGHT = 1e-6   #8.5e-05
-LEARNING_RATE = 4.0
+CONTENT_WEIGHT = 1e-1 # 8e-4 # test different values
+STYLE_WEIGHT = 1.0 # 8e-1, 8e-4 # test different values
+TOTAL_VARIATION_WEIGHT = 0.0 # 1e-6   #8.5e-05
+LEARNING_RATE = 2.0
 
 # The layer to use for the content loss.
 CONTENT_LAYER_NAME = "block5_conv2" #  initial : "block5_conv2" # test different values # block5_conv3, block5_conv4, block5_conv5
@@ -356,12 +356,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     n_iter = args.iterations
     
-    check_iter=10
+    check_iter=200
     # Prepare content, style images
-    name_content = "diana"
-    content_image_path = f'./dataset/{name_content}.jpeg'
+    name_content = "creek"
+    content_image_path = f'./dataset/{name_content}.jpg'
     # style_image_path_1 = './dataset/ghibli/ghibli-3.jpg'
-    style_image_path_2 = './dataset/doom.jpg'
+    style_image_path_2 = './dataset/starry_night.jpg'
     result_height, result_width = get_result_image_size(content_image_path, RESIZE_HEIGHT)
     print("result resolution: (%d, %d)" % (result_height, result_width))
 
@@ -430,11 +430,12 @@ if __name__ == "__main__":
         print("iter: %4d, loss: %8.f" % (iter, total_loss))
         
         # saving losses
-        losses["total_loss"].append(total_loss.numpy())
-        losses["loss_content"].append(loss_content.numpy())
-        losses["loss_style"].append(loss_style.numpy())
-        losses["loss_total_variation"].append(loss_total_variation.numpy())
-        
+        if (iter+1) % 4 == 0 :
+            losses["total_loss"].append(total_loss.numpy())
+            losses["loss_content"].append(loss_content.numpy())
+            losses["loss_style"].append(loss_style.numpy())
+            losses["loss_total_variation"].append(loss_total_variation.numpy())
+            
         if (iter + 1) % check_iter == 0:
             plot_losses(losses, LEARNING_RATE)
             generated_image_rgb = deprocess_image(generated_image, result_height, result_width)
@@ -452,9 +453,9 @@ if __name__ == "__main__":
     final_generated_image_rgb = deprocess_image(generated_image, result_height, result_width)
     if apply_color_preservation:
         final_preserved_color_image = original_color_transform(content_image_rgb, final_generated_image_rgb)
-        Image.fromarray(final_preserved_color_image).save("result/final_result.png")
+        Image.fromarray(final_preserved_color_image).save(f"result/final_result_alpha-{CONTENT_WEIGHT}_beta-{STYLE_WEIGHT}_.png")
     else:
-        Image.fromarray(final_generated_image_rgb).save("result/final_result.png")
+        Image.fromarray(final_generated_image_rgb).save(f"result/final_result_alpha-{CONTENT_WEIGHT}_beta-{STYLE_WEIGHT}_.png")
 
     final_time = time.time() - start_time
     print('generation of image lasted : ', final_time, 's')

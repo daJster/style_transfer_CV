@@ -28,6 +28,7 @@ def plot_losses(losses, learning_rate):
     plt.title(f'Weighted losses Over Time, lr: {learning_rate}')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
+    plt.yscale('log')
     plt.legend()
     plt.savefig(f"./plots/loss_evo_gatys_{learning_rate}.png")
     plt.close()

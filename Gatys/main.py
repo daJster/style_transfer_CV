@@ -3,6 +3,12 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.applications import vgg19
+<<<<<<< HEAD
+=======
+import time
+
+f = open("loss.txt", "w")
+>>>>>>> ad7bbb478203ee3bf5f71059b2af651b0cd9a778
 
 if tf.test.gpu_device_name():
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
@@ -15,11 +21,19 @@ RESIZE_HEIGHT = 607
 NUM_ITER = 3000
 
 # Weights of the different loss components
+<<<<<<< HEAD
 CONTENT_WEIGHT = 1 # 8e-4
 STYLE_WEIGHT = 0 # 8e-4
 
 # The layer to use for the content loss.
 CONTENT_LAYER_NAME = "block5_conv2" # "block2_conv2"
+=======
+CONTENT_WEIGHT = 8e-4 # 8e-4 # test different values
+STYLE_WEIGHT = 8e-1 # 8e-4 # test different values
+
+# The layer to use for the content loss.
+CONTENT_LAYER_NAME = "block5_conv2" #  initial : "block5_conv2" # test different values # block5_conv3, block5_conv4, block5_conv5
+>>>>>>> ad7bbb478203ee3bf5f71059b2af651b0cd9a778
 
 # List of layers to use for the style loss.
 STYLE_LAYER_NAMES = [
@@ -55,8 +69,13 @@ def get_model():
 def get_optimizer():
     return keras.optimizers.Adam(
         keras.optimizers.schedules.ExponentialDecay(
+<<<<<<< HEAD
             initial_learning_rate = 8.0, decay_steps = 445, decay_rate = 0.98
             # initial_learning_rate = 2.0, decay_steps = 376, decay_rate = 0.98
+=======
+            #initial_learning_rate = 8.0, decay_steps = 445, decay_rate = 0.98 # test different values
+            initial_learning_rate = 4.0, decay_steps = 376, decay_rate = 0.98
+>>>>>>> ad7bbb478203ee3bf5f71059b2af651b0cd9a778
         )
     )
 
@@ -127,17 +146,31 @@ if __name__ == "__main__":
     # Preprocessing
     content_tensor = preprocess_image(content_image_path, result_height, result_width)
     style_tensor = preprocess_image(style_image_path, result_height, result_width)
+<<<<<<< HEAD
     generated_image = tf.Variable(tf.random.uniform(style_tensor.shape, dtype=tf.dtypes.float32))
     # generated_image = tf.Variable(preprocess_image(content_image_path, result_height, result_width))
+=======
+    generated_image = tf.Variable(tf.random.uniform(style_tensor.shape, dtype=tf.dtypes.float32)) # gaussian noise
+    # generated_image = tf.Variable(preprocess_image(content_image_path, result_height, result_width)) # content image
+>>>>>>> ad7bbb478203ee3bf5f71059b2af651b0cd9a778
 
     # Build model
     model = get_model()
     optimizer = get_optimizer()
     print(model.summary())
 
+<<<<<<< HEAD
     content_features = model(content_tensor)
     style_features = model(style_tensor)
 
+=======
+    f.write(str(optimizer.get_config()))
+
+    content_features = model(content_tensor)
+    style_features = model(style_tensor)
+
+    start_time = time.time()
+>>>>>>> ad7bbb478203ee3bf5f71059b2af651b0cd9a778
     # Optimize result image
     for iter in range(NUM_ITER):
         with tf.GradientTape() as tape:
@@ -146,6 +179,7 @@ if __name__ == "__main__":
         grads = tape.gradient(loss, generated_image)
 
         print("iter: %4d, loss: %8.f" % (iter, loss))
+<<<<<<< HEAD
         optimizer.apply_gradients([(grads, generated_image)])
 
         if (iter + 1) % 500 == 0:
@@ -154,3 +188,20 @@ if __name__ == "__main__":
 
     name = "result/result_%d_%f_%f.png" % (NUM_ITER, CONTENT_WEIGHT, STYLE_WEIGHT)
     save_result(generated_image, result_height, result_width, name)
+=======
+        f.write("iter: %4d, loss: %8.f\n" % (iter, loss))
+        optimizer.apply_gradients([(grads, generated_image)])
+
+        if (iter + 1) % 200 == 0:
+            assert(os.path.isdir('result'))
+            name = "result/generated_at_iteration_%d.png" % (iter + 1)
+            save_result(generated_image, result_height, result_width, name)
+            time_for_200_it = time.time() - start_time
+            print('time_for_200_iterations: ', time_for_200_it)
+
+    name = "result/result_%d_%f_%f.png" % (NUM_ITER, CONTENT_WEIGHT, STYLE_WEIGHT)
+    save_result(generated_image, result_height, result_width, name)
+    final_time = time.time() - start_time
+    print('generation of image lasted : ', final_time, 's')
+    f.close()
+>>>>>>> ad7bbb478203ee3bf5f71059b2af651b0cd9a778
