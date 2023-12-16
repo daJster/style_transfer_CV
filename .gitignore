@@ -1,3 +1,5 @@
 *.md
-result/
+Gatys/result/
+LiFei/result/
 LiFei/__pycache__/
+Gatys/__pycache__/

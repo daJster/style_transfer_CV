@@ -103,5 +103,6 @@ def create_video(input_folder, output_video_path, fps=1):
     out.release()
     print(f"Video created at: {output_video_path}")
 
+
 if __name__ == "__main__":
     create_video('./result/', './plots/result_video_einstein.mp4')
