@@ -2,12 +2,12 @@ import tensorflow as tf
 from param import CONTENT_WEIGHT, STYLE_WEIGHT, TOTAL_VARIATION_WEIGHT, RESIZE_HEIGHT, STYLE_LAYER_NAMES, CONTENT_LAYER_NAME, APPLY_CORRELATION_CHAIN
 
 
-def compute_loss(feature_extractor, combination_image, content_features, style_features):
+def compute_loss(feature_extractor, combination_image, content_features, style_features, result_width):
     combination_features = feature_extractor(combination_image)
     style_reference_features = feature_extractor(style_features)
     
     loss_content = compute_content_loss(content_features, combination_features)
-    loss_total_variation = total_variation_loss(combination_image)
+    loss_total_variation = total_variation_loss(combination_image, result_width)
 
     if APPLY_CORRELATION_CHAIN :
         # Correlation Chain for Style Loss

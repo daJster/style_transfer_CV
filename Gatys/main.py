@@ -94,7 +94,7 @@ def main() :
     # Training loop
     for iter in range(N_ITER):
         with tf.GradientTape() as tape:
-            total_loss, loss_content, loss_style, loss_total_variation = compute_loss(model, generated_image, content_features, style_features)
+            total_loss, loss_content, loss_style, loss_total_variation = compute_loss(model, generated_image, content_features, style_features, result_width)
 
         grads = tape.gradient(total_loss, generated_image)
         optimizer.apply_gradients([(grads, generated_image)])
